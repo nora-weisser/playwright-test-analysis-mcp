@@ -36,7 +36,7 @@ export default defineConfig({
 
 The file must contain the standard top-level keys `config`, `suites`, `errors`, `stats`.
 
-A sample report is bundled at [results.json](src/playwright_report_mcp/results.json) if you just want to try the server out.
+A sample report is bundled at results.json if you just want to try the server out.
 
 ## 3. Configure the report path
 
