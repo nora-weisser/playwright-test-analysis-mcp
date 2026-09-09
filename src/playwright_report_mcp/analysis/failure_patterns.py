@@ -1,16 +1,17 @@
 from collections import defaultdict
 from playwright_report_mcp.models.failure import FailureEvidence
 
-MAX_EXAMPLES = 3
-
 # Checked in order, first hit wins, so the more specific patterns come first:
 # "TimeoutError: locator.click: ..." carries both a locator and a timeout, and
-# the timeout is the better description of it.
+# the locator is the better description of it.
 PATTERNS = {
+    "locator-ambiguous": [
+        "strict mode violation",
+    ],
     "locator-not-found": [
         "waiting for locator",
+        "waiting for getby",
         "element(s) not found",
-        "strict mode violation",
     ],
     "timing-or-waiting": [
         "timeout",
@@ -20,6 +21,12 @@ PATTERNS = {
         "net::err_",
         "econnrefused",
         "network",
+    ],
+    "setup-failure": [
+        "enoent",
+        "no such file or directory",
+        "cannot find module",
+        "eacces",
     ],
     "assertion-failure": [
         "expected:",
@@ -49,7 +56,7 @@ def analyze_failure_patterns(results: list[FailureEvidence]) -> list[dict]:
     """Group failures by the pattern their error message resembles.
 
     A pattern names what an error looks like, not why the test failed, so the
-    examples are there to be read rather than taken as a diagnosis.
+    errors are there to be read rather than taken as a diagnosis.
     """
 
     patterns: dict[str, list[FailureEvidence]] = defaultdict(list)
@@ -60,16 +67,29 @@ def analyze_failure_patterns(results: list[FailureEvidence]) -> list[dict]:
     output = []
 
     for pattern, failures in patterns.items():
-        test_ids = list(dict.fromkeys(failure.test_id for failure in failures))
-
-        examples = [failure.error for failure in failures if failure.error][:MAX_EXAMPLES]
+        # One entry per affected test rather than per failure, so a test that
+        # failed the same way on two projects reads as one problem on two
+        # browsers instead of two unrelated problems.
+        by_test: dict[str, list[FailureEvidence]] = defaultdict(list)
+        for failure in failures:
+            by_test[failure.test_id].append(failure)
 
         output.append({
             "pattern": pattern,
             "occurrences": len(failures),
-            "affected_tests": len(test_ids),
-            "test_ids": test_ids,
-            "examples": examples,
+            "affected_tests": len(by_test),
+            "failures": [
+                {
+                    "test_id": test_id,
+                    "projects": list(dict.fromkeys(
+                        run.project for run in runs if run.project
+                    )),
+                    "errors": list(dict.fromkeys(
+                        run.error for run in runs if run.error
+                    )),
+                }
+                for test_id, runs in by_test.items()
+            ],
         })
 
     return output
