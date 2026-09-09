@@ -2,6 +2,7 @@ from mcp.server import MCPServer
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from playwright_report_mcp.analysis.failure_patterns import analyze_failure_patterns
 from playwright_report_mcp.models.test_summary import TestSummary
 from playwright_report_mcp.playwright_report import PlaywrightReport
 
@@ -30,3 +31,12 @@ def get_failures() -> list[dict]:
     report = PlaywrightReport(get_report_path())
     failures = report.get_failed_tests()
     return failures
+
+@mcp.tool()
+def get_failure_patterns() -> list[dict]:
+    """Analyze failures and group them into known failure patterns."""
+
+    report = PlaywrightReport(get_report_path())
+    results = report.get_failure_evidence()
+
+    return analyze_failure_patterns(results)

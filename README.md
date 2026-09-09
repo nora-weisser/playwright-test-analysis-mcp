@@ -85,15 +85,44 @@ printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion
 
 You should get back a JSON-RPC result with `"serverInfo":{"name":"Playwright Report",...}`.
 
-### Connect it to a client
+### Connect it to Claude Code
 
-Register the server with Claude Desktop:
+The repository ships a project-scoped `.mcp.json`, so no setup is needed beyond `uv sync`:
 
-```bash
-uv run mcp install src/playwright_report_mcp/server.py
+```json
+{
+  "mcpServers": {
+    "playwright-report": {
+      "command": "uv",
+      "args": ["run", "playwright-report-mcp"]
+    }
+  }
+}
 ```
 
-Or add it manually to an MCP client config (e.g. `claude_desktop_config.json`):
+Claude Code launches MCP servers with the working directory set to the project root, so `uv` resolves this project's venv and `load_dotenv()` finds `.env` without any absolute paths.
+
+Start a session with `claude` from the repository root and approve the server when prompted — project-scoped servers need a one-time approval. Servers are loaded at startup, so a session that was already running won't see it until you restart.
+
+Verify the connection with `/mcp` inside the session, or from a terminal:
+
+```bash
+claude mcp list
+```
+
+You want `playwright-report: uv run playwright-report-mcp - ✔ Connected`. Then just ask, e.g. *"how many tests failed in the last Playwright run?"*.
+
+To register it for every project instead of only this one, or to keep it out of version control:
+
+```bash
+claude mcp add playwright-report -s user -- uv --directory /absolute/path/to/playwright-test-analysis-mcp run playwright-report-mcp
+```
+
+`--directory` matters here: outside this repository, it is what makes `uv` resolve this project's venv and find `.env`.
+
+### Connect it to Claude Desktop
+
+Add the server to `claude_desktop_config.json` (`~/Library/Application Support/Claude/` on macOS):
 
 ```json
 {
@@ -111,22 +140,24 @@ Or add it manually to an MCP client config (e.g. `claude_desktop_config.json`):
 }
 ```
 
-`--directory` matters: it makes `uv` resolve this project's venv and lets `load_dotenv()` find the `.env` file.
+Quit Claude Desktop completely (Cmd-Q, not just closing the window) and reopen it, then check the tools icon in the chat input for the server and its two tools. Per-server logs land in `~/Library/Logs/Claude/mcp-server-playwright-report.log`.
+
+Avoid `uv run mcp install src/playwright_report_mcp/server.py`. It writes an entry that runs the server through `--with mcp[cli]` in an isolated environment and without `--directory`, so this project's package is never importable and the server fails to start with `ModuleNotFoundError: No module named 'playwright_report_mcp'`.
 
 ## Tools
 
 | Tool | Description |
 |------|-------------|
 | `get_test_summary` | Summary of the latest run: `start_time`, `duration_ms`, `passed`, `failed`, `skipped`, `flaky`. |
-| `get_failures` | List of failed tests, each with `title`, `file`, `status` and the first `error` message. |
+| `get_failures` | List of failed tests, each with `test_id`, `title`, `file`, `status` and the most detailed `error` message. |
 
 ## Running the tests
-
-`pytest` and `pytest-asyncio` are installed, but the repository has no test files yet, so this currently collects 0 tests:
 
 ```bash
 uv run pytest
 ```
+
+The suite covers the report parsing: reading the run stats, trimming failures to the readable fields, and preserving the run context recorded alongside each failure.
 
 ## Troubleshooting
 
@@ -136,3 +167,5 @@ uv run pytest
 | `FileNotFoundError` on a tool call | `REPORT_PATH` points at a file that doesn't exist — use an absolute path. |
 | `KeyError: 'stats'` | The JSON isn't a Playwright `json`-reporter report (e.g. it's an HTML report or a raw blob). |
 | `mcp dev` fails to start | Install Node.js so `npx` is available, or use `mcp run` instead. |
+| `ModuleNotFoundError: No module named 'playwright_report_mcp'` | The client config runs `uv` without `--directory` from outside the repository. Use one of the configs above. |
+| Server missing from `/mcp` in Claude Code | Servers load at startup — restart the session, and approve the project-scoped server when prompted. |
