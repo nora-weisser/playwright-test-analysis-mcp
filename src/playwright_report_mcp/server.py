@@ -94,6 +94,11 @@ def get_test_history(test_id: str, project: str | None = None) -> TestHistory:
     The test_id is the one reported by the other tools, e.g.
     "checkout.spec.ts > TC-C01: proceeds to payment". Results from every
     project are counted unless one is named.
+
+    A test running on two browsers produces two results per run, so
+    `total_runs` (runs it appears in) and `total_results` (one per run per
+    project) differ, and the rates are out of the latter. `failure_rate`
+    counts outright failures; `instability_rate` counts flakes too.
     """
 
     return analyze_test_history(

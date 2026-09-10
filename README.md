@@ -190,7 +190,13 @@ Avoid `uv run mcp install src/playwright_report_mcp/server.py`. It writes an ent
 | `get_failures` | List of failed tests, each with `test_id`, `title`, `file`, `project`, `status` and the most detailed `error` message. One entry per test per project. Flaky tests are included — they failed before they passed — and `status` tells them from outright failures. |
 | `get_failure_patterns` | The run's failures grouped by what their error messages look like, e.g. `locator-not-found`, `assertion-failure`. |
 | `get_unstable_tests` | The tests that most often fail or flake across past runs, worst first: `instability_rate`, the counts behind it, the `failure_patterns` seen, and `last_status`. One entry per test per project. Takes a `limit` (default 10), optionally a `project`. |
-| `get_test_history` | How one test has done across past runs: `total_runs`, `passed`, `failed`, `failure_rate`, and every run with the pattern it failed on. Takes a `test_id`, optionally a `project`. |
+| `get_test_history` | How one test has done across past runs: `total_runs`, `total_results`, `passed`, `failed`, `failure_rate`, `instability_rate`, and every run with the pattern it failed on. Takes a `test_id`, optionally a `project`. |
+
+A test that runs on two browsers produces two results in every run, so
+`total_runs` counts the runs it appears in while `total_results` counts one per
+run per project — the rates are out of the latter. `failure_rate` is outright
+failures; `instability_rate` counts flakes as well, since a test that only
+passes on a retry is not a healthy test.
 
 The first four answer about the latest run or the history in general;
 `get_test_history` needs a `test_id`. `get_unstable_tests` is where you get

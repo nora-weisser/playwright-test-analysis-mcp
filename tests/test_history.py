@@ -114,7 +114,11 @@ def write_run(directory: Path, name: str, tests: list[tuple]) -> None:
     status_names = {"passed": "expected", "failed": "unexpected"}
     suites = []
 
-    for file, title, status, error in tests:
+    for entry in tests:
+        # An optional fifth element names the project, for the runs that need
+        # the same test recorded against more than one browser.
+        file, title, status, error = entry[:4]
+        project = entry[4] if len(entry) > 4 else "chromium"
         attempt = {
             "status": "passed" if status == "passed" else "failed",
             "duration": 100.0,
@@ -136,7 +140,7 @@ def write_run(directory: Path, name: str, tests: list[tuple]) -> None:
                 "file": file,
                 "tests": [{
                     "timeout": 30000,
-                    "projectName": "chromium",
+                    "projectName": project,
                     "status": status_names.get(status, status),
                     "results": attempts,
                 }],
@@ -249,3 +253,96 @@ def test_ranking_counts_each_project_separately():
     assert [(test.test_id, test.project, test.total_runs) for test in ranked] == [
         (CHECKOUT, "chromium", 5),
     ]
+
+
+# --- counting runs against results ----------------------------------------
+
+@pytest.fixture
+def two_project_history(tmp_path):
+    """Three runs of one test that runs on two browsers: six results.
+
+    It fails on firefox every time and passes on chromium every time -- one
+    test behaving differently on two browsers, not two separate problems.
+    """
+
+    boom = "Error: expect(received).toBeVisible()\n  - waiting for locator('.x')\n"
+    for index in range(1, 4):
+        write_run(tmp_path, f"run-00{index}.json", [
+            ("a.spec.ts", "cross browser", "passed", None, "chromium"),
+            ("a.spec.ts", "cross browser", "failed", boom, "firefox"),
+        ])
+    return tmp_path
+
+
+def cross_browser(history_dir, **kwargs):
+    return analyze_test_history("a.spec.ts > cross browser", history_dir, **kwargs)
+
+
+def test_total_runs_counts_runs_not_results(two_project_history):
+    """Three runs happened, whatever the test's browsers contributed."""
+
+    summary = cross_browser(two_project_history)
+
+    assert summary.total_runs == 3
+    assert summary.total_results == 6
+    assert len(summary.runs) == 6
+
+
+def test_the_rates_are_out_of_the_results(two_project_history):
+    """Failing on one of two browsers every run is half the results."""
+
+    summary = cross_browser(two_project_history)
+
+    assert summary.failed == 3
+    assert summary.failure_rate == pytest.approx(0.5)
+
+
+def test_a_rate_cannot_exceed_one_when_a_test_fails_on_every_browser(tmp_path):
+    """The bug this guards: failed/total_runs would have scored 2.0 here."""
+
+    boom = "Error: expect(received).toBeVisible()\n"
+    for index in range(1, 4):
+        write_run(tmp_path, f"run-00{index}.json", [
+            ("a.spec.ts", "always", "failed", boom, "chromium"),
+            ("a.spec.ts", "always", "failed", boom, "firefox"),
+        ])
+
+    summary = analyze_test_history("a.spec.ts > always", tmp_path)
+
+    assert (summary.total_runs, summary.total_results) == (3, 6)
+    assert summary.failure_rate == 1.0
+
+
+def test_narrowing_to_one_project_counts_that_project_only(two_project_history):
+    chromium = cross_browser(two_project_history, project="chromium")
+    firefox = cross_browser(two_project_history, project="firefox")
+
+    assert (chromium.total_runs, chromium.total_results) == (3, 3)
+    assert chromium.failure_rate == 0.0
+    assert (firefox.total_runs, firefox.total_results) == (3, 3)
+    assert firefox.failure_rate == 1.0
+
+
+def test_instability_counts_flakes_that_failure_rate_leaves_out(unstable_history):
+    """A test that only ever passes on a retry has a failure_rate of zero."""
+
+    summary = analyze_test_history("c.spec.ts > flakes", unstable_history)
+
+    assert (summary.failed, summary.flaky) == (0, 2)
+    assert summary.failure_rate == 0.0
+    assert summary.instability_rate == pytest.approx(0.5)
+
+
+def test_a_single_project_test_counts_runs_and_results_alike():
+    """The common case: one browser, so the two numbers agree."""
+
+    summary = history()
+
+    assert summary.total_runs == summary.total_results == 5
+
+
+def test_an_empty_history_has_no_rates():
+    summary = history("nowhere.spec.ts > never ran")
+
+    assert (summary.total_runs, summary.total_results) == (0, 0)
+    assert (summary.failure_rate, summary.instability_rate) == (0.0, 0.0)

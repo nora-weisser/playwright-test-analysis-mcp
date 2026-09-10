@@ -16,8 +16,9 @@ def analyze_test_history(
     """Summarize how one test has behaved across the stored runs.
 
     One entry per project the test ran on, so a test running on two browsers
-    contributes two results to a single run. Pass `project` to ask about one
-    browser instead of all of them.
+    contributes two results to a single run -- which is why `total_runs` and
+    `total_results` are counted separately, and why the rates are out of the
+    latter. Pass `project` to ask about one browser instead of all of them.
 
     An unknown `test_id` is not an error: it comes back as an empty history,
     which is the honest answer when nothing has been recorded under that name.
@@ -31,18 +32,21 @@ def analyze_test_history(
     ]
 
     counts = Counter(result.status for result in runs)
-    total = len(runs)
+    total_results = len(runs)
     failed = counts["failed"]
+    flaky = counts["flaky"]
 
     return TestHistory(
         test_id=test_id,
         project=project,
-        total_runs=total,
+        total_runs=len({result.run_id for result in runs}),
+        total_results=total_results,
         passed=counts["passed"],
         failed=failed,
         skipped=counts["skipped"],
-        flaky=counts["flaky"],
-        failure_rate=failed / total if total else 0.0,
+        flaky=flaky,
+        failure_rate=failed / total_results if total_results else 0.0,
+        instability_rate=(failed + flaky) / total_results if total_results else 0.0,
         runs=runs,
     )
 

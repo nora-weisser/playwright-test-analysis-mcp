@@ -19,12 +19,24 @@ class TestHistory(BaseModel):
 
     test_id: str
     project: str | None = None
+    # How many runs the test appears in. Not the same as the number of
+    # results: a test running on chromium and firefox contributes two
+    # results to a single run.
     total_runs: int
+    # One per run per project -- what the counts and rates below are out of.
+    total_results: int
     passed: int
     failed: int
     skipped: int
     flaky: int
+    # Both rates are out of `total_results`, not `total_runs`. A test that
+    # fails on both browsers in every run would otherwise score above 1.
     failure_rate: float
+    # Failures and flakes together: "how often did this test not simply
+    # pass". A flake is a failure that got a second chance, so a test that
+    # only ever passes on a retry is not healthy however few outright
+    # failures it has. Matches `instability_rate` on `TestStability`.
+    instability_rate: float
     runs: list[TestRunResult]
 
 
