@@ -95,7 +95,26 @@ class PlaywrightReport:
             failed=stats["unexpected"],
             skipped=stats["skipped"],
             flaky=stats["flaky"],
+            errors=self.get_run_errors(),
         )
+
+    def get_run_errors(self) -> list[str]:
+        """Return the errors the run reports outside any individual test.
+
+        A run that fails before it reaches a test -- a config that will not
+        load, a global setup that throws -- still writes a report, and every
+        count in it is zero. Without these the summary would describe that as
+        a run where nothing went wrong.
+        """
+
+        messages = []
+
+        for error in self.load().get("errors") or []:
+            message = error.get("message") if isinstance(error, dict) else error
+            if message:
+                messages.append(strip_ansi(str(message)))
+
+        return messages
 
     def get_test_results(self) -> list[TestResult]:
         """Return every test in the report, passed and failed alike.

@@ -153,3 +153,34 @@ def test_a_run_with_no_flakes_is_unaffected():
 
     assert len(failures) == 10
     assert all(failure["status"] == "failed" for failure in failures)
+
+
+# A run that never reached a test: global setup could not reach the database.
+# Every count is zero, so the errors are the only thing that says so.
+GLOBAL_FAILURE_PATH = Path(__file__).parent / "fixtures" / "global-setup-failure.json"
+
+
+def global_failure_report() -> PlaywrightReport:
+    return PlaywrightReport(GLOBAL_FAILURE_PATH)
+
+
+def test_a_run_that_died_before_any_test_does_not_read_as_a_clean_run():
+    """Zero failures because zero tests ran -- the opposite of nothing wrong."""
+
+    summary = global_failure_report().get_summary()
+
+    assert (summary.passed, summary.failed, summary.skipped, summary.flaky) == (0, 0, 0, 0)
+    assert len(summary.errors) == 2
+    assert "ECONNREFUSED" in summary.errors[0]
+
+
+def test_run_errors_have_their_colour_codes_removed():
+    errors = global_failure_report().get_run_errors()
+
+    assert "\x1b[" not in errors[0]
+
+
+def test_a_run_with_nothing_wrong_reports_no_errors():
+    """The bundled sample has real test failures but no run-wide errors."""
+
+    assert report().get_summary().errors == []

@@ -1,0 +1,26 @@
+{
+  "config": {
+    "workers": 4,
+    "fullyParallel": true,
+    "metadata": {},
+    "version": "1.49.0"
+  },
+  "suites": [],
+  "errors": [
+    {
+      "message": "\u001b[31mError\u001b[39m: connect ECONNREFUSED 127.0.0.1:5432\n    at globalSetup (global-setup.ts:12:5)\n",
+      "stack": "Error: connect ECONNREFUSED 127.0.0.1:5432"
+    },
+    {
+      "message": "Error: worker process exited unexpectedly (code 1)\n"
+    }
+  ],
+  "stats": {
+    "startTime": "2026-09-04T08:00:00.000Z",
+    "duration": 412.0,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

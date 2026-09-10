@@ -131,3 +131,19 @@ async def test_get_unstable_tests_is_listed_as_a_tool():
         tools = await client.list_tools()
 
     assert "get_unstable_tests" in {tool.name for tool in tools.tools}
+
+
+@pytest.mark.asyncio
+async def test_get_test_summary_surfaces_run_errors(monkeypatch):
+    """A run that died in global setup must not answer as an all-zero success."""
+
+    monkeypatch.setenv(
+        "REPORT_PATH", str(Path(__file__).parent / "fixtures" / "global-setup-failure.json")
+    )
+
+    async with Client(mcp, raise_exceptions=True) as client:
+        result = await client.call_tool("get_test_summary", {})
+
+    summary = result.structured_content
+    assert summary["failed"] == 0
+    assert "ECONNREFUSED" in summary["errors"][0]

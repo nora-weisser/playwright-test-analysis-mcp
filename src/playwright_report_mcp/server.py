@@ -51,7 +51,12 @@ def get_history_dir() -> Path:
 
 @mcp.tool()
 def get_test_summary() -> TestSummary:
-    """Return summary of the latest Playwright test run."""
+    """Return summary of the latest Playwright test run.
+
+    `errors` holds anything that went wrong outside a test -- a global setup
+    that threw, a worker that died. A run that fails that way reports zero of
+    everything else, so check it before reading the counts as a clean run.
+    """
 
     report = PlaywrightReport(get_report_path())
     summary = report.get_summary()
