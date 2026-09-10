@@ -38,23 +38,43 @@ The file must contain the standard top-level keys `config`, `suites`, `errors`, 
 
 A sample report is bundled at `results.json` if you just want to try the server out.
 
-## 3. Configure the report path
+## 3. Configure the paths
 
-Create a `.env` file in the repository root pointing at that report (absolute path recommended):
+The server reads two settings, both configured in the `env` block of `.mcp.json`:
 
+| Setting | Points at | Default |
+|---|---|---|
+| `REPORT_PATH` | the report of the latest run | none — tool calls fail without it |
+| `HISTORY_DIR` | past runs, one report per run: `run-001.json`, `run-002.json`, ... | `data/history` |
+
+```json
+"env": {
+  "REPORT_PATH": "src/playwright_report_mcp/results.json",
+  "HISTORY_DIR": "data/history"
+}
 ```
-REPORT_PATH=/absolute/path/to/results.json
+
+Relative paths are read from the repository root, so the same config works on any machine and whatever directory the client was started in. Absolute paths are used as given.
+
+Both are read at every tool call, so you can regenerate the report, or drop a new run into the history, without restarting the server. If `REPORT_PATH` is unset, tool calls fail with `REPORT_PATH is not set -- configure it in .mcp.json.`
+
+To run the server outside an MCP client, set them in the shell instead:
+
+```bash
+REPORT_PATH=src/playwright_report_mcp/results.json uv run playwright-report-mcp
 ```
 
-To use the bundled sample instead:
+## 4. Build up a history
 
+`get_test_history` answers from the reports kept in `data/history`. After each run, copy the reporter's output in as the next number:
+
+```bash
+cp results.json data/history/run-002.json
 ```
-REPORT_PATH=/absolute/path/to/playwright-test-analysis-mcp/src/playwright_report_mcp/results.json
-```
 
-`REPORT_PATH` is read at every tool call, so you can regenerate the report without restarting the server. If it is unset, tool calls fail with `REPORT_PATH environment variable is not set.`
+Anything matching `run-*.json` is read, so generated runs and real ones are treated alike. One run is enough for the tool to work; three or more before a trend means anything.
 
-## 4. Run the server
+## 5. Run the server
 
 ### Interactive development (MCP Inspector)
 
@@ -87,20 +107,24 @@ You should get back a JSON-RPC result with `"serverInfo":{"name":"Playwright Rep
 
 ### Connect it to Claude Code
 
-The repository ships a project-scoped `.mcp.json`, so no setup is needed beyond `uv sync`:
+The project is wired up by a project-scoped `.mcp.json`, so no setup is needed beyond `uv sync`:
 
 ```json
 {
   "mcpServers": {
     "playwright-report": {
       "command": "uv",
-      "args": ["run", "playwright-report-mcp"]
+      "args": ["run", "playwright-report-mcp"],
+      "env": {
+        "REPORT_PATH": "src/playwright_report_mcp/results.json",
+        "HISTORY_DIR": "data/history"
+      }
     }
   }
 }
 ```
 
-Claude Code launches MCP servers with the working directory set to the project root, so `uv` resolves this project's venv and `load_dotenv()` finds `.env` without any absolute paths.
+Claude Code launches MCP servers with the working directory set to the project root, so `uv` resolves this project's venv without any absolute paths.
 
 Start a session with `claude` from the repository root and approve the server when prompted — project-scoped servers need a one-time approval. Servers are loaded at startup, so a session that was already running won't see it until you restart.
 
@@ -118,7 +142,7 @@ To register it for every project instead of only this one, or to keep it out of 
 claude mcp add playwright-report -s user -- uv --directory /absolute/path/to/playwright-test-analysis-mcp run playwright-report-mcp
 ```
 
-`--directory` matters here: outside this repository, it is what makes `uv` resolve this project's venv and find `.env`.
+`--directory` matters here: outside this repository, it is what makes `uv` resolve this project's venv. Pass the paths too, with `-e REPORT_PATH=... -e HISTORY_DIR=...`, since a user-scoped entry has no `.mcp.json` behind it.
 
 ### Connect it to Claude Desktop
 
@@ -140,7 +164,7 @@ Add the server to `claude_desktop_config.json` (`~/Library/Application Support/C
 }
 ```
 
-Quit Claude Desktop completely (Cmd-Q, not just closing the window) and reopen it, then check the tools icon in the chat input for the server and its two tools. Per-server logs land in `~/Library/Logs/Claude/mcp-server-playwright-report.log`.
+Quit Claude Desktop completely (Cmd-Q, not just closing the window) and reopen it, then check the tools icon in the chat input for the server and its tools. Per-server logs land in `~/Library/Logs/Claude/mcp-server-playwright-report.log`.
 
 Avoid `uv run mcp install src/playwright_report_mcp/server.py`. It writes an entry that runs the server through `--with mcp[cli]` in an isolated environment and without `--directory`, so this project's package is never importable and the server fails to start with `ModuleNotFoundError: No module named 'playwright_report_mcp'`.
 
@@ -150,6 +174,8 @@ Avoid `uv run mcp install src/playwright_report_mcp/server.py`. It writes an ent
 |------|-------------|
 | `get_test_summary` | Summary of the latest run: `start_time`, `duration_ms`, `passed`, `failed`, `skipped`, `flaky`. |
 | `get_failures` | List of failed tests, each with `test_id`, `title`, `file`, `status` and the most detailed `error` message. |
+| `get_failure_patterns` | The run's failures grouped by what their error messages look like, e.g. `locator-not-found`, `assertion-failure`. |
+| `get_test_history` | How one test has done across past runs: `total_runs`, `passed`, `failed`, `failure_rate`, and every run with the pattern it failed on. Takes a `test_id`, optionally a `project`. |
 
 ## Running the tests
 
@@ -157,14 +183,14 @@ Avoid `uv run mcp install src/playwright_report_mcp/server.py`. It writes an ent
 uv run pytest
 ```
 
-The suite covers the report parsing: reading the run stats, trimming failures to the readable fields, and preserving the run context recorded alongside each failure.
+The suite covers the report parsing (run stats, trimmed failures, the run context recorded alongside each failure), the history built from the five fixture runs in `tests/fixtures/history`, and the tools themselves, called over an in-memory MCP client.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| `REPORT_PATH environment variable is not set.` | Create `.env` in the repo root, or export `REPORT_PATH` in the shell that starts the server. |
-| `FileNotFoundError` on a tool call | `REPORT_PATH` points at a file that doesn't exist — use an absolute path. |
+| `REPORT_PATH is not set` | Add it to the `env` block of `.mcp.json`, or export it in the shell that starts the server. |
+| `FileNotFoundError` on a tool call | `REPORT_PATH` or `HISTORY_DIR` points at nothing. Relative paths are read from the repository root, not the working directory. |
 | `KeyError: 'stats'` | The JSON isn't a Playwright `json`-reporter report (e.g. it's an HTML report or a raw blob). |
 | `mcp dev` fails to start | Install Node.js so `npx` is available, or use `mcp run` instead. |
 | `ModuleNotFoundError: No module named 'playwright_report_mcp'` | The client config runs `uv` without `--directory` from outside the repository. Use one of the configs above. |

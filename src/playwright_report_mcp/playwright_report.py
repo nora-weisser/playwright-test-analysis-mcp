@@ -2,6 +2,7 @@ import json
 import re
 from pathlib import Path
 from playwright_report_mcp.models.failure import FailureEvidence
+from playwright_report_mcp.models.test_result import TestResult, normalize_status
 from playwright_report_mcp.models.test_summary import TestSummary
 
 ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
@@ -16,12 +17,33 @@ def strip_ansi(text: str) -> str:
 
 
 class PlaywrightReport:
+    """One Playwright JSON report, read as normalized test results.
+
+    The single place that knows how Playwright's JSON is shaped: a stored run
+    from the history directory is read exactly like the latest run.
+    """
+
     def __init__(self, path: Path):
         self.path = path
+        self._report: dict | None = None
 
     def load(self) -> dict:
-        with self.path.open("r", encoding="utf-8") as file:
-            return json.load(file)
+        """Read the report, once per instance.
+
+        Callers build a fresh `PlaywrightReport` per request, so the cache
+        never hands out a stale run -- it only stops history from re-reading
+        the same file for every question asked of it.
+        """
+
+        if self._report is None:
+            with self.path.open("r", encoding="utf-8") as file:
+                self._report = json.load(file)
+        return self._report
+
+    def get_started_at(self) -> str | None:
+        """Return when the run started, which is what orders history."""
+
+        return self.load().get("stats", {}).get("startTime")
 
     def get_summary(self) -> "TestSummary":
         report = self.load()
@@ -35,6 +57,17 @@ class PlaywrightReport:
             flaky=stats["flaky"],
         )
 
+    def get_test_results(self) -> list[TestResult]:
+        """Return every test in the report, passed and failed alike.
+
+        One entry per test per project: a spec that runs on chromium and
+        firefox is two results, because they can disagree.
+        """
+
+        results: list[TestResult] = []
+        self._collect(self.load().get("suites", []), results)
+        return results
+
     def get_failed_tests(self) -> list[dict]:
         """Return the failed tests, trimmed to the fields that read well as text."""
 
@@ -47,15 +80,16 @@ class PlaywrightReport:
         """Return everything the report says about each failed test.
 
         Deliberately wider than what `get_failed_tests` exposes: the run
-        context (workers, project, CI, retries) is recorded too, because it
-        says as much about a failure as the error message itself.
+        context (workers, parallelism, CI) is recorded too, because it says as
+        much about a failure as the error message itself.
         """
 
-        report = self.load()
-        context = self._run_context(report.get("config", {}))
-        failures: list[FailureEvidence] = []
-        self._collect_failures(report.get("suites", []), context, failures)
-        return failures
+        context = self._run_context(self.load().get("config", {}))
+        return [
+            FailureEvidence(**result.model_dump(), **context)
+            for result in self.get_test_results()
+            if result.status == "failed"
+        ]
 
     def _run_context(self, config: dict) -> dict:
         """Extract the run-wide facts that individual failures are judged against."""
@@ -83,7 +117,7 @@ class PlaywrightReport:
         messages = [message for message in messages if message]
         return strip_ansi(max(messages, key=len)) if messages else None
 
-    def _build_evidence(self, spec: dict, suite: dict, test: dict, context: dict) -> FailureEvidence:
+    def _build_result(self, spec: dict, suite: dict, test: dict) -> TestResult:
         results = test.get("results", []) or [{}]
         last_result = results[-1]
         attachments = last_result.get("attachments", []) or []
@@ -91,29 +125,30 @@ class PlaywrightReport:
 
         title = spec.get("title")
         file = spec.get("file") or suite.get("file")
-        timeout_ms = test.get("timeout") or 0
 
-        return FailureEvidence(
+        return TestResult(
+            # File and title together, so the same test keeps the same id from
+            # one run to the next and two files may share a title. The project
+            # stays a field of its own: the same test failing on firefox only
+            # is one test behaving differently, not a second test.
             test_id=f"{file} > {title}" if file else title,
             title=title,
             file=file,
             project=test.get("projectName"),
-            status=test.get("status"),
+            status=normalize_status(test.get("status")),
             result_status=last_result.get("status"),
             error=self._pick_error_message(test),
             retries=max((result.get("retry", 0) for result in results), default=0),
             duration_ms=last_result.get("duration") or 0,
-            timeout_ms=timeout_ms,
+            timeout_ms=test.get("timeout") or 0,
             timed_out=any(result.get("status") == "timedOut" for result in results),
             attachments=[item.get("name") for item in attachments if item.get("name")],
             trace_path=trace.get("path") if trace else None,
-            **context,
         )
 
-    def _collect_failures(self, suites: list[dict], context: dict, failures: list[FailureEvidence]) -> None:
+    def _collect(self, suites: list[dict], results: list[TestResult]) -> None:
         for suite in suites:
             for spec in suite.get("specs", []):
                 for test in spec.get("tests", []):
-                    if test.get("status") == "unexpected":
-                        failures.append(self._build_evidence(spec, suite, test, context))
-            self._collect_failures(suite.get("suites", []), context, failures)
+                    results.append(self._build_result(spec, suite, test))
+            self._collect(suite.get("suites", []), results)

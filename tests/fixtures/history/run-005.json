@@ -1,0 +1,159 @@
+{
+  "config": {
+    "workers": 1,
+    "fullyParallel": true,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "version": "1.49.0"
+  },
+  "suites": [
+    {
+      "title": "checkout.spec.ts",
+      "file": "checkout.spec.ts",
+      "specs": [
+        {
+          "title": "TC-C01: proceeds to payment",
+          "ok": false,
+          "tags": [],
+          "id": "checkout.spec.ts-TC-C01: proceeds to payment",
+          "file": "checkout.spec.ts",
+          "line": 10,
+          "column": 3,
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 1200.5,
+                  "errors": [
+                    {
+                      "message": "Error: expect(received).toHaveText(expected)\n\nExpected: \"Payment\"\nReceived: \"Cart\"\n"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-05T09:00:00.000Z",
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "path": "test-results/run-005/screenshot.png",
+                      "contentType": "image/png"
+                    },
+                    {
+                      "name": "trace",
+                      "path": "test-results/run-005/trace.zip",
+                      "contentType": "application/zip"
+                    }
+                  ],
+                  "error": {
+                    "message": "Error: expect(received).toHaveText(expected)\n\nExpected: \"Payment\"\nReceived: \"Cart\"\n"
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ]
+        }
+      ],
+      "suites": []
+    },
+    {
+      "title": "smoke.spec.ts",
+      "file": "smoke.spec.ts",
+      "specs": [
+        {
+          "title": "TC-S01: app shell renders",
+          "ok": true,
+          "tags": [],
+          "id": "smoke.spec.ts-TC-S01: app shell renders",
+          "file": "smoke.spec.ts",
+          "line": 10,
+          "column": 3,
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1200.5,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-05T09:00:00.000Z",
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ]
+        }
+      ],
+      "suites": []
+    },
+    {
+      "title": "cart.spec.ts",
+      "file": "cart.spec.ts",
+      "specs": [
+        {
+          "title": "TC-R02: shows the item count",
+          "ok": true,
+          "tags": [],
+          "id": "cart.spec.ts-TC-R02: shows the item count",
+          "file": "cart.spec.ts",
+          "line": 10,
+          "column": 3,
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1200.5,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-05T09:00:00.000Z",
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ]
+        }
+      ],
+      "suites": []
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-09-05T09:00:00.000Z",
+    "duration": 4200.0,
+    "expected": 2,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

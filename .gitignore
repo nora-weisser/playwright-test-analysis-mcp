@@ -1,6 +1,7 @@
 .venv
 __pycache__/
 *.pyc
-.env
 results.json
 .mcp.json
+data/
+.pytest_cache/

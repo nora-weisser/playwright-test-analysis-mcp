@@ -446,7 +446,6 @@ dependencies = [
     { name = "mcp", extra = ["cli"] },
     { name = "pytest" },
     { name = "pytest-asyncio" },
-    { name = "python-dotenv" },
 ]
 
 [package.metadata]
@@ -454,7 +453,6 @@ requires-dist = [
     { name = "mcp", extras = ["cli"], specifier = ">=2.1.1" },
     { name = "pytest", specifier = ">=8.4.2" },
     { name = "pytest-asyncio", specifier = ">=1.2.0" },
-    { name = "python-dotenv", specifier = ">=1.2.3" },
 ]
 
 [[package]]
