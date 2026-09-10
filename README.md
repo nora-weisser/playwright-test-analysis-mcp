@@ -189,7 +189,13 @@ Avoid `uv run mcp install src/playwright_report_mcp/server.py`. It writes an ent
 | `get_test_summary` | Summary of the latest run: `start_time`, `duration_ms`, `passed`, `failed`, `skipped`, `flaky`. |
 | `get_failures` | List of failed tests, each with `test_id`, `title`, `file`, `project`, `status` and the most detailed `error` message. One entry per test per project. Flaky tests are included — they failed before they passed — and `status` tells them from outright failures. |
 | `get_failure_patterns` | The run's failures grouped by what their error messages look like, e.g. `locator-not-found`, `assertion-failure`. |
+| `get_unstable_tests` | The tests that most often fail or flake across past runs, worst first: `instability_rate`, the counts behind it, the `failure_patterns` seen, and `last_status`. One entry per test per project. Takes a `limit` (default 10), optionally a `project`. |
 | `get_test_history` | How one test has done across past runs: `total_runs`, `passed`, `failed`, `failure_rate`, and every run with the pattern it failed on. Takes a `test_id`, optionally a `project`. |
+
+The first four answer about the latest run or the history in general;
+`get_test_history` needs a `test_id`. `get_unstable_tests` is where you get
+one — including for a test that fails half the time but happened to pass in
+the latest run, which the failure tools would not mention at all.
 
 ## Running the tests
 

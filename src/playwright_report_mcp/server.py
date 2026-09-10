@@ -2,8 +2,11 @@ from mcp.server import MCPServer
 import os
 from pathlib import Path
 from playwright_report_mcp.analysis.failure_patterns import analyze_failure_patterns
-from playwright_report_mcp.analysis.test_history import analyze_test_history
-from playwright_report_mcp.models.history import TestHistory
+from playwright_report_mcp.analysis.test_history import (
+    analyze_test_history,
+    rank_unstable_tests,
+)
+from playwright_report_mcp.models.history import TestHistory, TestStability
 from playwright_report_mcp.models.test_summary import TestSummary
 from playwright_report_mcp.playwright_report import PlaywrightReport
 
@@ -91,5 +94,26 @@ def get_test_history(test_id: str, project: str | None = None) -> TestHistory:
     return analyze_test_history(
         test_id=test_id,
         history_dir=get_history_dir(),
+        project=project,
+    )
+
+
+@mcp.tool()
+def get_unstable_tests(limit: int = 10, project: str | None = None) -> list[TestStability]:
+    """Return the tests that most often fail or flake across past runs.
+
+    Where an investigation starts: every other tool needs a `test_id` you
+    already know, so this is what finds one -- including for a test that is
+    failing half the time but happened to pass in the latest run.
+
+    One entry per test per project, worst first, each with how often it failed
+    or flaked, what its errors looked like, and how it did most recently.
+    Feed a `test_id` from here into `get_test_history` for the run-by-run
+    detail. Tests that have never failed are not listed.
+    """
+
+    return rank_unstable_tests(
+        history_dir=get_history_dir(),
+        limit=limit,
         project=project,
     )

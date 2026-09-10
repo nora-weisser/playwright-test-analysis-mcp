@@ -97,3 +97,37 @@ async def test_get_test_summary_works_with_nothing_configured(monkeypatch):
 
     assert result.is_error is False
     assert result.structured_content["passed"] == 5
+
+
+@pytest.mark.asyncio
+async def test_get_unstable_tests_answers_over_mcp():
+    async with Client(mcp, raise_exceptions=True) as client:
+        result = await client.call_tool("get_unstable_tests", {})
+
+    assert result.is_error is False
+
+    tests = result.structured_content["result"]
+    assert [test["test_id"] for test in tests] == [CHECKOUT]
+    assert tests[0]["instability_rate"] == pytest.approx(0.4)
+
+
+@pytest.mark.asyncio
+async def test_the_id_from_get_unstable_tests_works_in_get_test_history():
+    """The point of the tool: it hands the next one something to ask about."""
+
+    async with Client(mcp, raise_exceptions=True) as client:
+        unstable = await client.call_tool("get_unstable_tests", {"limit": 1})
+        test_id = unstable.structured_content["result"][0]["test_id"]
+
+        history = await client.call_tool("get_test_history", {"test_id": test_id})
+
+    assert history.structured_content["total_runs"] == 5
+    assert history.structured_content["failed"] == 2
+
+
+@pytest.mark.asyncio
+async def test_get_unstable_tests_is_listed_as_a_tool():
+    async with Client(mcp, raise_exceptions=True) as client:
+        tools = await client.list_tools()
+
+    assert "get_unstable_tests" in {tool.name for tool in tools.tools}
