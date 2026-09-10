@@ -56,7 +56,11 @@ def get_test_summary() -> TestSummary:
 
 @mcp.tool()
 def get_failures() -> list[dict]:
-    """Return failed tests of the latest Playwright test run."""
+    """Return the tests that failed in the latest Playwright test run.
+
+    Includes flaky tests, which failed and then passed on a retry; `status`
+    says which is which.
+    """
 
     report = PlaywrightReport(get_report_path())
     failures = report.get_failed_tests()
@@ -64,7 +68,11 @@ def get_failures() -> list[dict]:
 
 @mcp.tool()
 def get_failure_patterns() -> list[dict]:
-    """Analyze failures and group them into known failure patterns."""
+    """Analyze failures and group them into known failure patterns.
+
+    Flaky tests are analyzed too: the error a test failed with before it
+    passed is the same kind of evidence as one it never recovered from.
+    """
 
     report = PlaywrightReport(get_report_path())
     results = report.get_failure_evidence()

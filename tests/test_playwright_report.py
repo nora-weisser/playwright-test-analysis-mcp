@@ -1,5 +1,6 @@
 from pathlib import Path
 import pytest
+from playwright_report_mcp.analysis.failure_patterns import analyze_failure_patterns
 from playwright_report_mcp.playwright_report import PlaywrightReport, strip_ansi
 
 REPORT_PATH = Path(__file__).parent.parent / "src" / "playwright_report_mcp" / "results.json"
@@ -88,3 +89,67 @@ def test_json_that_is_not_a_playwright_report_says_so(tmp_path):
 
     with pytest.raises(RuntimeError, match="not a Playwright JSON report"):
         PlaywrightReport(wrong_file).get_summary()
+
+
+# A run whose problems are mostly flakes: one outright failure and two tests
+# that failed and then passed on a retry. The bundled sample has no flakes.
+FLAKY_REPORT_PATH = Path(__file__).parent / "fixtures" / "flaky-run.json"
+
+
+def flaky_report() -> PlaywrightReport:
+    return PlaywrightReport(FLAKY_REPORT_PATH)
+
+
+def test_flaky_tests_are_reported_alongside_outright_failures():
+    """A run whose only problems are flakes still has problems to report."""
+
+    failures = flaky_report().get_failed_tests()
+    flaky = [failure for failure in failures if failure["status"] == "flaky"]
+
+    assert len(flaky) == 2
+    assert {failure["test_id"] for failure in flaky} == {
+        "cart.spec.ts > TC-R01: persists the cart",
+        "smoke.spec.ts > TC-S02: a todo can be added",
+    }
+
+
+def test_a_flake_stays_distinguishable_from_a_failure():
+    """Both are reported, so `status` is what tells them apart."""
+
+    failures = flaky_report().get_failed_tests()
+
+    assert {failure["status"] for failure in failures} == {"failed", "flaky"}
+
+
+def test_a_passing_test_is_still_left_out():
+    """Widening the filter must not turn this into "every test"."""
+
+    failures = flaky_report().get_failed_tests()
+
+    assert len(failures) == 3
+    assert "dashboard.spec.ts > TC-D01: loads widgets" not in {
+        failure["test_id"] for failure in failures
+    }
+
+
+def test_a_flakes_error_is_classified_like_any_other():
+    """The error a test failed with before passing is evidence like any other."""
+
+    patterns = analyze_failure_patterns(flaky_report().get_failure_evidence())
+    pattern_of = {
+        failure["test_id"]: entry["pattern"]
+        for entry in patterns
+        for failure in entry["failures"]
+    }
+
+    assert pattern_of["cart.spec.ts > TC-R01: persists the cart"] == "assertion-failure"
+    assert pattern_of["smoke.spec.ts > TC-S02: a todo can be added"] == "locator-not-found"
+
+
+def test_a_run_with_no_flakes_is_unaffected():
+    """The bundled sample has none, so its failure list must not change."""
+
+    failures = report().get_failed_tests()
+
+    assert len(failures) == 10
+    assert all(failure["status"] == "failed" for failure in failures)

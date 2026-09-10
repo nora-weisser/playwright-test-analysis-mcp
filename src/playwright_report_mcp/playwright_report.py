@@ -12,6 +12,11 @@ ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
 # problem on two browsers is indistinguishable from two unrelated ones.
 FAILURE_FIELDS = ("test_id", "title", "file", "project", "status", "error")
 
+# A flaky test failed too -- it only passed once it was retried, and the error
+# it failed with is as real as any other. `status` keeps the two apart, so a
+# caller that wants outright failures can still tell them from flakes.
+FAILING_STATUSES = frozenset({"failed", "flaky"})
+
 
 def strip_ansi(text: str) -> str:
     """Remove terminal colour codes Playwright embeds in error messages."""
@@ -104,7 +109,12 @@ class PlaywrightReport:
         return results
 
     def get_failed_tests(self) -> list[dict]:
-        """Return the failed tests, trimmed to the fields that read well as text."""
+        """Return the tests that failed, trimmed to the fields that read as text.
+
+        Flaky tests are included, marked as such by `status`: they failed
+        before they passed, and a run with three flakes and no failures is
+        still a run with three things worth looking at.
+        """
 
         return [
             evidence.model_dump(include=set(FAILURE_FIELDS))
@@ -112,18 +122,21 @@ class PlaywrightReport:
         ]
 
     def get_failure_evidence(self) -> list[FailureEvidence]:
-        """Return everything the report says about each failed test.
+        """Return everything the report says about each test that failed.
 
         Deliberately wider than what `get_failed_tests` exposes: the run
         context (workers, parallelism, CI) is recorded too, because it says as
         much about a failure as the error message itself.
+
+        Covers flaky tests as well as outright failures -- see
+        `FAILING_STATUSES`.
         """
 
         context = self._run_context(self.load().get("config", {}))
         return [
             FailureEvidence(**result.model_dump(), **context)
             for result in self.get_test_results()
-            if result.status == "failed"
+            if result.status in FAILING_STATUSES
         ]
 
     def _run_context(self, config: dict) -> dict:

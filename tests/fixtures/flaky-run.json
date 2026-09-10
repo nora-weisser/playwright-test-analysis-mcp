@@ -1,0 +1,230 @@
+{
+  "config": {
+    "workers": 2,
+    "fullyParallel": true,
+    "metadata": {
+      "actualWorkers": 2
+    },
+    "version": "1.49.0"
+  },
+  "suites": [
+    {
+      "title": "cart.spec.ts",
+      "file": "cart.spec.ts",
+      "specs": [
+        {
+          "title": "TC-R01: persists the cart",
+          "ok": false,
+          "tags": [],
+          "id": "cart.spec.ts-TC-R01",
+          "file": "cart.spec.ts",
+          "line": 8,
+          "column": 3,
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "status": "flaky",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 2132.0,
+                  "errors": [
+                    {
+                      "message": "Error: expect(received).toHaveText(expected)\n\nExpected string: \"2 items\"\nReceived string: \"1 item\"\n"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-03T09:00:00.000Z",
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "path": "test-results/flaky/screenshot.png",
+                      "contentType": "image/png"
+                    },
+                    {
+                      "name": "trace",
+                      "path": "test-results/flaky/trace.zip",
+                      "contentType": "application/zip"
+                    }
+                  ]
+                },
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 1128.0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 1,
+                  "startTime": "2026-09-03T09:00:04.000Z",
+                  "attachments": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "smoke.spec.ts",
+      "file": "smoke.spec.ts",
+      "specs": [
+        {
+          "title": "TC-S02: a todo can be added",
+          "ok": false,
+          "tags": [],
+          "id": "smoke.spec.ts-TC-S02",
+          "file": "smoke.spec.ts",
+          "line": 12,
+          "column": 3,
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "status": "flaky",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 1900.0,
+                  "errors": [
+                    {
+                      "message": "Error: expect(received).toBeVisible()\n\nCall log:\n  - expect.toBeVisible with timeout 5000ms\n  - waiting for locator('.todo-item')\n"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-03T09:00:01.000Z",
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "path": "test-results/flaky/smoke.png",
+                      "contentType": "image/png"
+                    }
+                  ]
+                },
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 913.0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 1,
+                  "startTime": "2026-09-03T09:00:05.000Z",
+                  "attachments": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "payment.spec.ts",
+      "file": "payment.spec.ts",
+      "specs": [
+        {
+          "title": "TC-P01: submits an order",
+          "ok": false,
+          "tags": [],
+          "id": "payment.spec.ts-TC-P01",
+          "file": "payment.spec.ts",
+          "line": 5,
+          "column": 3,
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "status": "unexpected",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 800.0,
+                  "errors": [
+                    {
+                      "message": "Error: strict mode violation: locator('button') resolved to 3 elements\n"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-03T09:00:02.000Z",
+                  "attachments": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "dashboard.spec.ts",
+      "file": "dashboard.spec.ts",
+      "specs": [
+        {
+          "title": "TC-D01: loads widgets",
+          "ok": true,
+          "tags": [],
+          "id": "dashboard.spec.ts-TC-D01",
+          "file": "dashboard.spec.ts",
+          "line": 4,
+          "column": 3,
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "status": "expected",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 410.0,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-03T09:00:03.000Z",
+                  "attachments": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-09-03T09:00:00.000Z",
+    "duration": 7283.0,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 2
+  }
+}
