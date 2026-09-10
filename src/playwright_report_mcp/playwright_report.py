@@ -36,9 +36,41 @@ class PlaywrightReport:
         """
 
         if self._report is None:
-            with self.path.open("r", encoding="utf-8") as file:
-                self._report = json.load(file)
+            self._report = self._read()
         return self._report
+
+    def _read(self) -> dict:
+        """Read the file, saying what is wrong with it rather than raising raw.
+
+        The path is configured by hand, so a wrong one is the likeliest
+        failure of all -- and it reaches the user through an MCP client, which
+        shows the message and swallows the traceback. Each case names the file
+        it tried, because the caller cannot see which path was resolved.
+        """
+
+        try:
+            with self.path.open("r", encoding="utf-8") as file:
+                report = json.load(file)
+        except FileNotFoundError as error:
+            raise RuntimeError(
+                f"No Playwright report at {self.path} -- generate one with "
+                "`npx playwright test --reporter=json`, or point REPORT_PATH "
+                "at an existing report."
+            ) from error
+        except json.JSONDecodeError as error:
+            raise RuntimeError(
+                f"{self.path} is not valid JSON ({error}). A report cut short "
+                "by an interrupted run looks like this."
+            ) from error
+
+        if not isinstance(report, dict) or "stats" not in report:
+            raise RuntimeError(
+                f"{self.path} is not a Playwright JSON report: it has no "
+                "'stats'. The `json` reporter writes 'config', 'suites', "
+                "'errors' and 'stats' at the top level."
+            )
+
+        return report
 
     def get_started_at(self) -> str | None:
         """Return when the run started, which is what orders history."""

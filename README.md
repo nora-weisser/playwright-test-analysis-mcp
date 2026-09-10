@@ -44,7 +44,7 @@ The server reads two settings, both configured in the `env` block of `.mcp.json`
 
 | Setting | Points at | Default |
 |---|---|---|
-| `REPORT_PATH` | the report of the latest run | none — tool calls fail without it |
+| `REPORT_PATH` | the report of the latest run | the bundled sample, `src/playwright_report_mcp/results.json` |
 | `HISTORY_DIR` | past runs, one report per run: `run-001.json`, `run-002.json`, ... | `data/history` |
 
 ```json
@@ -56,7 +56,7 @@ The server reads two settings, both configured in the `env` block of `.mcp.json`
 
 Relative paths are read from the repository root, so the same config works on any machine and whatever directory the client was started in. Absolute paths are used as given.
 
-Both are read at every tool call, so you can regenerate the report, or drop a new run into the history, without restarting the server. If `REPORT_PATH` is unset, tool calls fail with `REPORT_PATH is not set -- configure it in .mcp.json.`
+Both are read at every tool call, so you can regenerate the report, or drop a new run into the history, without restarting the server. Both have defaults pointing into the repository, so the server answers with no configuration at all — set them to work against your own project.
 
 To run the server outside an MCP client, set them in the shell instead:
 
@@ -83,6 +83,20 @@ uv run mcp dev src/playwright_report_mcp/server.py
 ```
 
 Opens the MCP Inspector in your browser, where you can list and invoke the tools by hand. Requires `npx`.
+
+This reads the bundled sample report, because the Inspector cannot be given
+`REPORT_PATH` from your shell: it spawns the server with a fixed set of
+variables (`HOME`, `LOGNAME`, `PATH`, `SHELL`, `TERM`, `USER`) and drops the
+rest, so exporting one has no effect. To point the Inspector at a different
+report, use the **Environment Variables** fields in its own configuration panel.
+
+Each way of starting the server takes its configuration from a different place:
+
+| Launched by | Configuration comes from |
+|---|---|
+| MCP Inspector (`mcp dev`) | the Inspector's Environment Variables fields |
+| Your shell (`mcp run`, `playwright-report-mcp`) | exported variables |
+| Claude Code | the `env` block in `.mcp.json` |
 
 ### Plain stdio server
 
@@ -189,9 +203,9 @@ The suite covers the report parsing (run stats, trimmed failures, the run contex
 
 | Symptom | Fix |
 |---|---|
-| `REPORT_PATH is not set` | Add it to the `env` block of `.mcp.json`, or export it in the shell that starts the server. |
-| `FileNotFoundError` on a tool call | `REPORT_PATH` or `HISTORY_DIR` points at nothing. Relative paths are read from the repository root, not the working directory. |
-| `KeyError: 'stats'` | The JSON isn't a Playwright `json`-reporter report (e.g. it's an HTML report or a raw blob). |
+| Tools answer about the wrong tests | With `REPORT_PATH` unset the server reads the bundled sample report. Set it to your own run. |
+| `No Playwright report at ...` | The path in the message is what `REPORT_PATH` resolved to. Relative paths are read from the repository root, not the working directory. |
+| `... is not a Playwright JSON report` | The file isn't `json`-reporter output (e.g. an HTML report or a raw blob). |
 | `mcp dev` fails to start | Install Node.js so `npx` is available, or use `mcp run` instead. |
 | `ModuleNotFoundError: No module named 'playwright_report_mcp'` | The client config runs `uv` without `--directory` from outside the repository. Use one of the configs above. |
 | Server missing from `/mcp` in Claude Code | Servers load at startup — restart the session, and approve the project-scoped server when prompted. |

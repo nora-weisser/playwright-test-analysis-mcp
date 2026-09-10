@@ -1,4 +1,5 @@
 from pathlib import Path
+import pytest
 from playwright_report_mcp.playwright_report import PlaywrightReport, strip_ansi
 
 REPORT_PATH = Path(__file__).parent.parent / "src" / "playwright_report_mcp" / "results.json"
@@ -48,3 +49,30 @@ def test_error_messages_have_their_colour_codes_removed():
 
 def test_strip_ansi_leaves_plain_text_alone():
     assert strip_ansi("Timeout of 30000ms exceeded.") == "Timeout of 30000ms exceeded."
+
+
+def test_a_missing_report_names_the_file_it_looked_for(tmp_path):
+    """The configured path is the likeliest thing to be wrong, so say which."""
+
+    missing = tmp_path / "nowhere.json"
+
+    with pytest.raises(RuntimeError, match=str(missing)):
+        PlaywrightReport(missing).get_summary()
+
+
+def test_a_truncated_report_is_reported_as_bad_json(tmp_path):
+    cut_short = tmp_path / "results.json"
+    cut_short.write_text('{"stats": {"star')
+
+    with pytest.raises(RuntimeError, match="not valid JSON"):
+        PlaywrightReport(cut_short).get_summary()
+
+
+def test_json_that_is_not_a_playwright_report_says_so(tmp_path):
+    """Previously a bare KeyError: 'stats' with no hint of the cause."""
+
+    wrong_file = tmp_path / "results.json"
+    wrong_file.write_text('{"hello": 1}')
+
+    with pytest.raises(RuntimeError, match="not a Playwright JSON report"):
+        PlaywrightReport(wrong_file).get_summary()

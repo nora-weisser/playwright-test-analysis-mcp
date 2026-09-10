@@ -2,6 +2,7 @@ from pathlib import Path
 import pytest
 from mcp import Client
 from playwright_report_mcp.server import (
+    DEFAULT_REPORT_PATH,
     PROJECT_ROOT,
     get_history_dir,
     get_report_path,
@@ -63,3 +64,36 @@ def test_the_configured_paths_point_at_real_files(monkeypatch):
 
     assert get_report_path().is_file()
     assert get_history_dir().is_dir()
+
+
+def test_the_report_defaults_to_the_bundled_sample(monkeypatch):
+    """No REPORT_PATH is not an error: the Inspector cannot supply one.
+
+    It spawns servers with a fixed set of environment variables and drops
+    everything else, so a default is the only thing that reaches the process.
+    """
+
+    monkeypatch.delenv("REPORT_PATH", raising=False)
+
+    assert get_report_path() == DEFAULT_REPORT_PATH
+    assert get_report_path().is_file()
+
+
+def test_an_explicit_report_path_still_wins(monkeypatch):
+    monkeypatch.setenv("REPORT_PATH", "/elsewhere/results.json")
+
+    assert get_report_path() == Path("/elsewhere/results.json")
+
+
+@pytest.mark.asyncio
+async def test_get_test_summary_works_with_nothing_configured(monkeypatch):
+    """The whole server answers out of the box -- the bug this fixes."""
+
+    monkeypatch.delenv("REPORT_PATH", raising=False)
+    monkeypatch.delenv("HISTORY_DIR", raising=False)
+
+    async with Client(mcp, raise_exceptions=True) as client:
+        result = await client.call_tool("get_test_summary", {})
+
+    assert result.is_error is False
+    assert result.structured_content["passed"] == 5
