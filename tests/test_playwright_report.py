@@ -19,7 +19,19 @@ def test_summary_reads_the_run_stats():
 def test_failed_tests_are_trimmed_to_the_readable_fields():
     failures = report().get_failed_tests()
 
-    assert set(failures[0]) == {"test_id", "title", "file", "status", "error"}
+    assert set(failures[0]) == {
+        "test_id", "title", "file", "project", "status", "error",
+    }
+
+
+def test_the_same_test_failing_on_two_projects_stays_distinguishable():
+    """Otherwise the two are identical rows and read as a repeated failure."""
+
+    failures = report().get_failed_tests()
+    repeated = [f for f in failures if f["test_id"].startswith("cart.spec.ts > TC-R01")]
+
+    assert len(repeated) == 2
+    assert {f["project"] for f in repeated} == {"chromium", "firefox"}
 
 
 def test_every_failed_test_entry_is_collected():

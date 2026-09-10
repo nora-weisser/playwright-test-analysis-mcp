@@ -7,7 +7,10 @@ from playwright_report_mcp.models.test_summary import TestSummary
 
 ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
 
-FAILURE_FIELDS = ("test_id", "title", "file", "status", "error")
+# The project is one of these because a spec that runs on chromium and firefox
+# fails as two results: without it the two are identical rows, and the same
+# problem on two browsers is indistinguishable from two unrelated ones.
+FAILURE_FIELDS = ("test_id", "title", "file", "project", "status", "error")
 
 
 def strip_ansi(text: str) -> str:
