@@ -1,61 +1,19 @@
 from mcp.server import MCPServer
-import os
-from pathlib import Path
 from playwright_report_mcp.analysis.failure_patterns import analyze_failure_patterns
 from playwright_report_mcp.analysis.test_history import (
     analyze_test_history,
     rank_unstable_tests,
 )
+from playwright_report_mcp.config import get_history_dir, get_report_path
 from playwright_report_mcp.models.history import TestHistory, TestStability
 from playwright_report_mcp.models.test_summary import TestSummary
 from playwright_report_mcp.playwright_report import PlaywrightReport
 
 mcp = MCPServer("Playwright Report")
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
-# Where past runs are kept: one Playwright JSON report per run, named
-# run-001.json, run-002.json, ... Copied there after a run, or generated.
-DEFAULT_HISTORY_DIR = PROJECT_ROOT / "data" / "history"
-
-# The report of the latest run. Defaulted, like the history directory, so the
-# server answers on every launch path rather than only the configured one: the
-# MCP Inspector spawns servers with a fixed set of environment variables
-# (HOME, LOGNAME, PATH, SHELL, TERM, USER) and drops the rest, so REPORT_PATH
-# cannot reach the process there however it is exported.
-DEFAULT_REPORT_PATH = PROJECT_ROOT / "src" / "playwright_report_mcp" / "results.json"
-
-
-def resolve_path(path: str) -> Path:
-    """Read a configured path, relative ones counting from the project root.
-
-    The paths come from .mcp.json, which is shared, so they should not be
-    tied to one machine -- nor to the directory Claude Code happened to be
-    started in.
-    """
-
-    configured = Path(path).expanduser()
-    return configured if configured.is_absolute() else PROJECT_ROOT / configured
-
-def get_report_path() -> Path:
-    """Return the report to read, falling back to the bundled sample run."""
-
-    path = os.getenv("REPORT_PATH")
-    return resolve_path(path) if path else DEFAULT_REPORT_PATH
-
-def get_history_dir() -> Path:
-    """Return the history directory, overridable for a different checkout."""
-
-    path = os.getenv("HISTORY_DIR")
-    return resolve_path(path) if path else DEFAULT_HISTORY_DIR
-
 @mcp.tool()
 def get_test_summary() -> TestSummary:
     """Return summary of the latest Playwright test run.
-
-    `errors` holds anything that went wrong outside a test -- a global setup
-    that threw, a worker that died. A run that fails that way reports zero of
-    everything else, so check it before reading the counts as a clean run.
     """
 
     report = PlaywrightReport(get_report_path())
