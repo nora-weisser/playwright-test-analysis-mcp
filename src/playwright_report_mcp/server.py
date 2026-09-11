@@ -48,15 +48,6 @@ def get_failure_patterns() -> list[dict]:
 @mcp.tool()
 def get_test_history(test_id: str, project: str | None = None) -> TestHistory:
     """Return how one test has done across past runs: how often it failed, and how.
-
-    The test_id is the one reported by the other tools, e.g.
-    "checkout.spec.ts > TC-C01: proceeds to payment". Results from every
-    project are counted unless one is named.
-
-    A test running on two browsers produces two results per run, so
-    `total_runs` (runs it appears in) and `total_results` (one per run per
-    project) differ, and the rates are out of the latter. `failure_rate`
-    counts outright failures; `instability_rate` counts flakes too.
     """
 
     return analyze_test_history(
@@ -70,14 +61,8 @@ def get_test_history(test_id: str, project: str | None = None) -> TestHistory:
 def get_unstable_tests(limit: int = 10, project: str | None = None) -> list[TestStability]:
     """Return the tests that most often fail or flake across past runs.
 
-    Where an investigation starts: every other tool needs a `test_id` you
-    already know, so this is what finds one -- including for a test that is
-    failing half the time but happened to pass in the latest run.
-
     One entry per test per project, worst first, each with how often it failed
     or flaked, what its errors looked like, and how it did most recently.
-    Feed a `test_id` from here into `get_test_history` for the run-by-run
-    detail. Tests that have never failed are not listed.
     """
 
     return rank_unstable_tests(
